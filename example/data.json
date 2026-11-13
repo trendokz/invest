@@ -1,0 +1,19 @@
+{
+ "investors": [
+  {"id": "inv1", "name": "Инвестор 1", "start": "2026-01-01", "initial": 1000000}
+ ],
+ "months": [
+  {
+   "key": "2026-06", "label": "Июнь 2026", "period": "1–30 июня 2026", "orders": 0, "returns": 0,
+   "periods": [{"label": "1–30 июня", "days": 30, "net": 100000, "capital": 1000000}],
+   "pool": {"sales": 1000000, "kaspi": 0, "tax": 0, "delivery": 0, "cogs": 0, "gross": 200000, "expenses": 100000, "net": 100000, "capital": 1000000, "skus": 0},
+   "expenses": [["Маркетинг", 100000]],
+   "top": [],
+   "investors": [
+    {"id": "inv1", "rate": 0.5, "capitalStart": 1000000, "capitalEnd": 1000000, "capital": 1000000,
+     "dividend": 50000, "yield_": 0.05, "parts": [{"capital": 1000000, "share": 1, "profit": 100000}],
+     "initial": 1000000, "totalProfit": 50000, "roi": 0.05, "months": 1, "avgMonthly": 0.05, "flows": []}
+   ]
+  }
+ ]
+}

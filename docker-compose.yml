@@ -1,0 +1,31 @@
+# Trendo Analytics: кабинет инвестора и страница с калькулятором.
+#   docker compose up -d       -> http://localhost:8080
+# Настройки в .env (пример: .env.example). Личные данные не хранятся в git
+# и не попадают в образы: папка TRENDO_DATA_DIR подключается томом.
+services:
+  build:
+    image: python:3.12-alpine
+    command: ["sh", "/src/docker/build.sh"]
+    volumes:
+      - ./build.py:/src/build.py:ro
+      - ./example:/src/example:ro
+      - ./cabinet/template.html:/src/cabinet/template.html:ro
+      - ./calculator/template.html:/src/calculator/template.html:ro
+      - ./docker/build.sh:/src/docker/build.sh:ro
+      - ${TRENDO_DATA_DIR:-./example}:/data:ro
+      - site:/site
+
+  web:
+    image: nginx:1.27-alpine
+    depends_on:
+      build:
+        condition: service_completed_successfully
+    ports:
+      - "${TRENDO_PORT:-8080}:80"
+    volumes:
+      - site:/usr/share/nginx/html:ro
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+
+volumes:
+  site:

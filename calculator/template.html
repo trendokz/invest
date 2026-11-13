@@ -1,0 +1,116 @@
+<meta charset="utf-8">
+<title>Trendo Analytics · Инвестиционный пул</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/*STYLE*/
+/* public page */
+.hero{display:grid;gap:14px;padding-block:20px 6px}
+.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(1.7rem,4.6vw,2.8rem);line-height:1.12;letter-spacing:-.02em;max-width:20ch}
+.hero h1 em{font-style:normal;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{margin:0;color:var(--muted);max-width:62ch;font-size:1.02rem}
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sec-h h2{font-size:1.35rem}
+nav.anchors{display:flex;gap:6px;flex-wrap:wrap}
+nav.anchors a{color:var(--silver);text-decoration:none;font-size:.85rem;border:1px solid rgba(201,207,219,.25);border-radius:99px;padding:5px 12px}
+nav.anchors a:hover{border-color:var(--gold);color:var(--gold)}
+section[id]{scroll-margin-top:84px}
+@media (max-width:520px){nav.anchors a:not(:first-child){display:none}}
+.month-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.month-tabs button{border:1px solid rgba(201,207,219,.25);background:transparent;color:var(--silver);border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:.85rem}
+.month-tabs button.on{border-color:var(--gold);color:var(--gold);background:var(--gold-soft)}
+</style>
+
+<div id="app"></div>
+
+<script>
+const DATA = /*DATA*/null;
+/*HELPERS*/
+
+const state = { user:null };
+const PUBLIC = true;
+const app = document.getElementById('app');
+let detailKey = DATA.months[DATA.months.length-1].key;
+
+function trendChart(){
+  const ms=DATA.months, W=680,H=260,L=56,R=52,T=24,B=30;
+  const hi0=Math.max(...ms.map(m=>m.pool.sales)); const step=niceStep(hi0/4); const hi=Math.ceil(hi0*1.05/step)*step;
+  const ys=Math.max(...ms.map(monthYield))*1.25;
+  const y=v=>T+(H-T-B)*(1-v/hi), yy=v=>T+(H-T-B)*(1-v/ys);
+  const slot=(W-L-R)/ms.length, bw=Math.min(30,slot*.28), cx=i=>L+slot*(i+.5);
+  let g=''; for(let v=0; v<=hi+1; v+=step) g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-8}" y="${y(v)+4}" text-anchor="end">${short(v)}</text>`;
+  const bars=ms.map((m,i)=>`<rect x="${cx(i)-bw-2}" y="${y(m.pool.sales)}" width="${bw}" height="${H-B-y(m.pool.sales)}" rx="3" fill="var(--silver-dim)" opacity=".6"/>
+    <rect x="${cx(i)+2}" y="${y(m.pool.net)}" width="${bw}" height="${H-B-y(m.pool.net)}" rx="3" fill="var(--gold)"/>
+    <text class="ax" x="${cx(i)}" y="${H-B+18}" text-anchor="middle">${esc(m.label.split(' ')[0])}</text>`).join('');
+  const line=ms.map((m,i)=>`${i?'L':'M'}${cx(i)},${yy(monthYield(m))}`).join('');
+  const dots=ms.map((m,i)=>`<circle cx="${cx(i)}" cy="${yy(monthYield(m))}" r="4.5" fill="var(--bg)" stroke="var(--ink)" stroke-width="2"/>
+    <text x="${cx(i)}" y="${yy(monthYield(m))-11}" text-anchor="middle" style="fill:var(--ink);font-size:12px;font-weight:700">${pct(monthYield(m),1)}</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Продажи, чистая прибыль и доходность инвестора по месяцам">${g}${bars}<path d="${line}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="4 4"/>${dots}</svg>`;
+}
+
+function render(){
+  const ms=DATA.months, last=ms[ms.length-1], first=ms[0];
+  const sumSales=ms.reduce((s,m)=>s+m.pool.sales,0), sumNet=ms.reduce((s,m)=>s+m.pool.net,0), sumInv=ms.reduce((s,m)=>s+m.paidToInvestors,0);
+  const avgY=ms.reduce((s,m)=>s+monthYield(m),0)/ms.length;
+  const GEN={'Январь':'января','Февраль':'февраля','Март':'марта','Апрель':'апреля','Май':'мая','Июнь':'июня','Июль':'июля','Август':'августа','Сентябрь':'сентября','Октябрь':'октября','Ноябрь':'ноября','Декабрь':'декабря'};
+  const opts=ms.map(m=>{const [mn,yr]=m.label.split(' '); return `<option value="${m.key}" ${m.key===calc.start?'selected':''}>с ${GEN[mn]||mn} ${yr}</option>`}).join('');
+  const presets=[500000,1000000,2000000,5000000,10000000].map(v=>`<button type="button" class="chip ${v===calc.amount?'on':''}" data-v="${v}">${short(v)} ₸</button>`).join('');
+  const table=ms.slice().reverse().map(m=>`<tr><td>${m.label}</td><td>${tg(m.pool.sales)}</td><td>${tg(m.pool.gross)}</td><td>${tg(m.pool.expenses)}</td><td class="pos">${tg(m.pool.net)}</td><td>${pct(m.pool.net/m.pool.sales,1)}</td><td><b>${pct(monthYield(m))}</b></td></tr>`).join('');
+  const tabs=ms.map(m=>`<button type="button" data-k="${m.key}" class="${m.key===detailKey?'on':''}">${m.label.split(' ')[0]}</button>`).join('');
+  app.innerHTML = `<header class="top"><div class="wrap">${BRAND}<span class="spacer"></span>
+      <nav class="anchors" aria-label="Разделы"><a href="#calc">Калькулятор</a><a href="#results">Результаты</a><a href="#how">Как это работает</a></nav></div></header>
+  <main class="wrap">
+    <section class="hero fade"><span class="eyebrow">Инвестиционный пул · e-commerce на Kaspi</span>
+      <h1>Ваши деньги работают в товарах, которые <em>уже продаются</em></h1>
+      <p>Мы закупаем и продаём товары на Kaspi.kz, а чистую прибыль каждый месяц делим с инвесторами пропорционально их доле в пуле. Ниже фактические результаты пула за ${first.label.toLowerCase()} – ${last.label.toLowerCase()}.</p></section>
+    <section class="tiles fade">
+      <div class="tile hero"><span class="eyebrow">Доходность инвестора</span><span class="v">${pct(avgY)}</span><span class="s">в среднем в месяц</span></div>
+      <div class="tile"><span class="eyebrow">Продажи пула</span><span class="v">${short(sumSales)} ₸</span><span class="s">за ${ms.length} мес.</span></div>
+      <div class="tile"><span class="eyebrow">Чистая прибыль</span><span class="v">${short(sumNet)} ₸</span><span class="s">${pct(sumNet/sumSales,1)} от продаж</span></div>
+      <div class="tile"><span class="eyebrow">Начислено инвесторам</span><span class="v">${short(sumInv)} ₸</span><span class="s">капитал пула ${short(last.pool.capital)} ₸</span></div>
+    </section>
+
+    <section id="calc" class="fade" style="display:grid;gap:16px">
+      <div class="sec-h"><h2>Сколько бы вы заработали</h2><span class="muted">по фактической доходности каждого месяца</span></div>
+      <div class="panel"><form class="calc-form" id="cf" autocomplete="off">
+        <div class="field"><label for="calc-amount">Сумма инвестиций, ₸</label><input id="calc-amount" inputmode="numeric" value="${fmt(calc.amount)}"><div class="chips">${presets}</div></div>
+        <div class="field"><label for="calc-start">Если бы вы вошли</label><select id="calc-start">${opts}</select></div>
+        <div class="field"><label>Что делать с прибылью</label><div class="seg" role="group"><button type="button" data-mode="reinvest" class="${calc.mode==='reinvest'?'on':''}">Реинвестировать</button><button type="button" data-mode="payout" class="${calc.mode==='payout'?'on':''}">Забирать</button></div></div>
+      </form></div>
+      <div id="calc-out"></div>
+    </section>
+
+    <section id="results" class="fade" style="display:grid;gap:16px">
+      <div class="sec-h"><h2>Результаты пула по месяцам</h2></div>
+      <div class="panel"><div class="panel-h"><h2>Динамика</h2><div class="legend"><span><i style="background:var(--silver-dim)"></i>Продажи</span><span><i style="background:var(--gold)"></i>Чистая прибыль</span><span><i style="background:var(--ink);height:2px;vertical-align:3px"></i>Доходность инвестора</span></div></div>
+        <div class="chart">${trendChart()}</div>
+        <div class="tbl-wrap"><table><thead><tr><th>Месяц</th><th>Продажи</th><th>Валовая прибыль</th><th>Расходы</th><th>Чистая прибыль</th><th>Рентаб.</th><th>Инвестору</th></tr></thead><tbody>${table}</tbody></table></div>
+        <p class="note" style="margin:0">«Инвестору» — доходность на капитал за месяц: чистая прибыль ÷ капитал пула × 50%.</p></div>
+      <div class="sec-h"><h2>Отчёт за месяц</h2><div class="month-tabs" id="tabs">${tabs}</div></div>
+      <div id="detail" style="display:grid;gap:16px">${poolBlock(ms.find(m=>m.key===detailKey))}</div>
+    </section>
+
+    <section id="how" class="panel fade"><h2>Как это работает</h2>
+      <ol class="calc">
+        <li><span class="n">1</span><span>Вы вносите деньги в общий пул<br><span class="op">капитал идёт на закуп товаров для продажи на Kaspi</span></span><span class="amt"></span></li>
+        <li><span class="n">2</span><span>Через 25 дней деньги начинают работать<br><span class="op">это время на аналитику товаров, закуп и логистику</span></span><span class="amt">25 дн.</span></li>
+        <li><span class="n">3</span><span>Каждый месяц вы получаете долю чистой прибыли<br><span class="op">прибыль на вашу долю в пуле делится пополам между вами и управляющими</span></span><span class="amt">50%</span></li>
+        <li><span class="n">4</span><span>Прибыль можно забирать или оставлять в пуле<br><span class="op">реинвест увеличивает капитал и доход следующих месяцев</span></span><span class="amt"></span></li>
+        <li><span class="n">5</span><span>Личный кабинет с отчётом каждый месяц<br><span class="op">ваш капитал, доля, расчёт дохода, продажи и расходы пула</span></span><span class="amt"></span></li>
+      </ol>
+      <p class="disclaimer">Все цифры на странице взяты из фактических ежемесячных отчётов пула. Прошлая доходность не гарантирует такую же в будущем: результат зависит от продаж и расходов каждого месяца. Чтобы стать инвестором, свяжитесь с управляющим Trendo Analytics.</p>
+    </section>
+    <footer>Trendo Analytics · данные за ${first.label.toLowerCase()} – ${last.label.toLowerCase()}. Суммы в тенге.</footer>
+  </main>`;
+  const amt=document.getElementById('calc-amount');
+  amt.oninput=()=>{ const v=parseInt(amt.value.replace(/\D/g,''),10)||0; calc.amount=v; drawCalc(); app.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',+c.dataset.v===v)); };
+  amt.onblur=()=>{ amt.value=fmt(calc.amount); };
+  app.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ calc.amount=+c.dataset.v; amt.value=fmt(calc.amount); app.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c)); drawCalc(); });
+  document.getElementById('calc-start').onchange=e=>{ calc.start=e.target.value; drawCalc(); };
+  app.querySelectorAll('.seg button').forEach(bn=>bn.onclick=()=>{ calc.mode=bn.dataset.mode; app.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===bn)); drawCalc(); });
+  app.querySelectorAll('#tabs button').forEach(bn=>bn.onclick=()=>{ detailKey=bn.dataset.k; app.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===bn)); document.getElementById('detail').innerHTML=poolBlock(ms.find(m=>m.key===detailKey)); });
+  drawCalc();
+}
+render();
+</script>

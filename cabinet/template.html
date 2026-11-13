@@ -1,0 +1,445 @@
+<meta charset="utf-8">
+<title>Trendo Analytics · Кабинет инвестора</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky header with month switch; summary tiles, then "how your income was calculated", charts, pool report below */
+:root{
+  /* Один фирменный образ Trendo: тёмно-синий фон, золото для денег и акцентов, серебро для вспомогательных линий и подписей */
+  --bg:#081032; --surface:#0F1A47; --surface-2:#13205A; --ink:#EEF1F8; --muted:#A3ACC6; --line:rgba(201,207,219,.16);
+  --accent:#D6B263; --accent-soft:rgba(214,178,99,.14); --gold:#D6B263; --gold-soft:rgba(214,178,99,.14); --neg:#EE8B76;
+  --silver:#C9CFDB; --silver-dim:#8E97B2;
+  --navy:#060C2A; --navy-2:#13205A; --on-navy:#F2F4FA; --brand-gold:#D6B263;
+  --gold-grad:linear-gradient(135deg,#EDD592 0%,#CFA650 50%,#A9823A 100%);
+  --silver-grad:linear-gradient(135deg,#F1F3F8 0%,#BFC6D4 45%,#8D96AC 100%);
+  --display:"Montserrat","Inter",system-ui,sans-serif; --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);background-image:radial-gradient(rgba(201,207,219,.10) 1px,transparent 1.4px),radial-gradient(ellipse at 80% -10%,rgba(214,178,99,.10),transparent 55%),radial-gradient(ellipse at 0% 30%,rgba(60,90,200,.18),transparent 60%);background-size:26px 26px,100% 100%,100% 100%;background-attachment:fixed;color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--navy)}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{text-wrap:balance;margin:0}
+h2{font-family:var(--display);font-weight:700;font-size:1.15rem;letter-spacing:-.01em}
+.eyebrow{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--silver);font-weight:600}
+.muted{color:var(--muted)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* login */
+.login{min-height:100%;display:grid;place-items:center;padding-block:48px}
+.login-card{width:100%;max-width:420px;background:var(--surface);border:1px solid rgba(214,178,99,.35);box-shadow:0 30px 80px rgba(0,0,0,.45);border-radius:14px;overflow:hidden;display:grid}
+.login-head{background:var(--navy);background-image:radial-gradient(circle at 85% 20%,rgba(212,176,98,.18),transparent 55%);padding:26px 28px}
+.login-head .brand svg{width:52px;height:52px}.login-head .brand .wm{font-size:1.3rem}.login-head .brand .wm small{font-size:.8rem}
+.login-body{padding:24px 28px 28px;display:grid;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--on-navy);text-decoration:none}
+.brand svg{width:34px;height:34px;flex:none}
+.brand .wm{font-family:var(--display);font-weight:800;font-size:.95rem;line-height:1;letter-spacing:.02em;text-transform:uppercase;color:var(--brand-gold);display:grid;gap:2px;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.brand .wm small{font-weight:600;font-size:.62rem;letter-spacing:.04em;text-transform:none;color:var(--silver);-webkit-text-fill-color:var(--silver)}
+.field{display:grid;gap:6px}
+.field label{font-size:.85rem;color:var(--muted)}
+.field input,.field select{border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:11px 12px;width:100%}
+.btn{border:0;background:var(--gold-grad);color:#0A1238;border-radius:9px;padding:11px 16px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--silver);border:1px solid rgba(201,207,219,.35)}
+.err{color:var(--neg);font-size:.88rem;min-height:1.2em}
+.hint{font-size:.82rem;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+
+/* header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(6,12,42,.92);backdrop-filter:blur(8px);color:var(--on-navy);border-bottom:1px solid rgba(212,176,98,.35)}
+header.top select.month{background:var(--navy-2);color:var(--on-navy);border-color:rgba(255,255,255,.18)}
+header.top .btn.ghost{color:var(--on-navy);border-color:rgba(255,255,255,.25)}
+@media (max-width:520px){header.top .brand .wm small{display:none}}
+header.top .wrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-block:12px}
+header.top .spacer{flex:1}
+.who{font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent);font-size:.8rem;font-weight:600}
+.pill.gold{background:var(--gold-soft);color:var(--gold)}
+select.month{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px}
+
+main{display:grid;gap:28px;padding-block:26px 56px}
+.hello{display:grid;gap:6px}
+.hello h1{font-family:var(--display);font-weight:700;font-size:clamp(1.4rem,3.4vw,2rem);letter-spacing:-.02em}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.tile{background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--line);position:relative;overflow:hidden;border-radius:12px;padding:16px;display:grid;gap:4px;align-content:start}
+.tile .v{font-family:var(--display);font-weight:700;font-size:1.35rem;letter-spacing:-.02em;white-space:nowrap}
+.tile .s{font-size:.82rem;color:var(--muted)}
+.tile::before{content:"";position:absolute;inset:0 0 auto;height:1px;background:var(--silver-grad);opacity:.7}
+.tile.hero::before{background:var(--gold-grad);opacity:1;height:2px}
+.tile.hero{background:var(--navy);border-color:rgba(214,178,99,.55);color:var(--on-navy);background-image:radial-gradient(circle at 100% 0,rgba(212,176,98,.22),transparent 60%)}
+.tile.hero .v{color:var(--brand-gold)}
+.tile.hero .eyebrow,.tile.hero .s{color:inherit;opacity:.82}
+@media (max-width:860px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:420px){.tile .v{font-size:1.12rem}}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.panel{background:linear-gradient(180deg,rgba(19,32,90,.85),rgba(15,26,71,.85));border:1px solid var(--line);border-radius:12px;padding:20px;display:grid;gap:16px;align-content:start;min-width:0}
+.panel-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+
+/* calculation steps */
+.calc{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.calc li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:baseline;padding:11px 0;border-bottom:1px dashed var(--line)}
+.calc li:last-child{border-bottom:0}
+.calc .n{font-family:var(--display);font-size:.8rem;color:var(--silver-dim)}
+.calc .op{color:var(--muted);font-size:.85rem}
+.calc .amt{font-weight:600;text-align:right;white-space:nowrap}
+.calc li.result .amt{color:var(--accent);font-family:var(--display);font-weight:700;font-size:1.15rem}
+
+/* charts */
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.chart .ax{fill:var(--muted);font-size:11px;font-family:var(--body)}
+.chart .gl{stroke:var(--line);stroke-width:1}
+.note{font-size:.82rem;color:var(--muted)}
+
+/* share bar */
+.share{display:grid;gap:8px}
+.share-bar{height:14px;border-radius:7px;background:var(--bg);border:1px solid var(--line);overflow:hidden;display:flex}
+.share-bar span{height:100%;background:var(--gold-grad)}
+
+/* pool p&l */
+.pl{display:grid;gap:9px}
+.pl-row{display:grid;grid-template-columns:minmax(0,170px) minmax(0,1fr) 118px;gap:10px;align-items:center;font-size:.9rem}
+.pl-row .bar{height:10px;border-radius:5px;background:var(--bg);position:relative;overflow:hidden}
+.pl-row .bar span{position:absolute;top:0;bottom:0;left:0;border-radius:5px;background:var(--silver-grad);opacity:.75}
+.pl-row.pos .bar span{background:var(--gold-grad);opacity:1}
+.pl-row.total{font-weight:600}
+.pl-row .num{text-align:right;white-space:nowrap}
+.pl-row.neg .num{color:var(--muted)}
+.pl-row.w4{grid-template-columns:minmax(0,170px) minmax(0,1fr) 104px 52px}
+.pl-row .pc{text-align:right;white-space:nowrap;color:var(--gold);font-weight:600;font-size:.85rem}
+.pl-row.total .pc{color:var(--gold)}
+@media (max-width:520px){.pl-row{grid-template-columns:minmax(0,1fr) 108px}.pl-row.w4{grid-template-columns:minmax(0,1fr) 96px 48px}.pl-row .bar{grid-column:1/-1;order:3}}
+
+.tbl-wrap{overflow-x:auto;margin:0 -4px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{padding:9px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td.name{white-space:normal;min-width:200px;max-width:360px}
+th{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--silver-dim);font-weight:600}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--bg)}
+.pos{color:var(--accent)}
+footer{font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+/* calculator */
+.calc-form{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:end}
+@media (max-width:760px){.calc-form{grid-template-columns:minmax(0,1fr)}}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{border:1px solid rgba(201,207,219,.3);background:transparent;color:var(--silver);border-radius:99px;padding:4px 11px;font-size:.82rem;cursor:pointer}
+.chip.on,.chip:hover{border-color:var(--gold);color:var(--gold)}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--muted);padding:10px 8px;cursor:pointer;font-weight:600;font-size:.88rem}
+.seg button.on{background:var(--gold-soft);color:var(--gold)}
+.field input#calc-amount{font-family:var(--display);font-weight:700;font-size:1.1rem}
+.disclaimer{font-size:.8rem;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.linkbtn{background:none;border:0;color:var(--gold);font-weight:600;cursor:pointer;padding:0;text-align:left}
+@media (prefers-reduced-motion:no-preference){.fade{animation:f .35s ease both}@keyframes f{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}}
+</style>
+
+<div id="app"></div>
+
+<script>
+const DATA = /*DATA*/null;
+const CODES = /*CODES*/null;   // demo access codes: id -> code
+const ADMIN_CODE = /*ADMIN*/null;
+
+const LOGO = `<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D08D"/><stop offset=".5" stop-color="#C9A04E"/><stop offset="1" stop-color="#A9823A"/></linearGradient></defs>
+  <rect x="1" y="1" width="30" height="30" fill="url(#lg)"/><rect x="33" y="1" width="30" height="30" fill="url(#lg)"/><rect x="1" y="33" width="30" height="30" fill="url(#lg)"/><rect x="33" y="33" width="30" height="30" fill="url(#lg)"/>
+  <g fill="none" stroke="#0E1A4A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9h14M16 9v15"/><path d="M41 23l14-14M46 9h9v9"/><path d="M16 48c-3-4-8-4-8 0s5 4 8 0 5-4 8-4 0 8-8 4z" stroke-width="2.4"/><path d="M41 55l7-15 7 15M43.6 49.5h8.8"/></g></svg>`;
+const BRAND = `<div class="brand">${LOGO}<span class="wm">Trendo Analytics<small>всё для роста x100!</small></span></div>`;
+const fmt = n => Math.round(n).toLocaleString('ru-RU').replace(/ /g,' ');
+const tg = n => fmt(n) + ' ₸';
+const pct = (x,d=2) => (x*100).toFixed(d).replace('.',',') + '%';
+const short = n => { const a=Math.abs(n); if(a>=1e6) return (n/1e6).toFixed(a>=1e7?1:2).replace('.',',')+' млн'; if(a>=1e3) return Math.round(n/1e3)+' тыс'; return fmt(n); };
+const dateRu = s => new Date(s+'T00:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const invById = id => DATA.investors.find(i=>i.id===id);
+
+let state = { user:null, monthKey: DATA.months[DATA.months.length-1].key, viewAs:null };
+try{ const s=JSON.parse(sessionStorage.getItem('ta-session')||'null'); if(s) state.user=s; }catch(e){}
+const save = () => { try{ sessionStorage.setItem('ta-session', JSON.stringify(state.user)); }catch(e){} };
+const app = document.getElementById('app');
+
+function login(){
+  app.innerHTML = `<div class="wrap login"><form class="login-card" id="lf" autocomplete="off">
+    <div class="login-head">${BRAND}</div><div class="login-body">
+    <div><h2>Кабинет инвестора</h2><p class="muted" style="margin:6px 0 0">Ваш капитал, доля в пуле и прибыль по месяцам.</p></div>
+    <div class="field"><label for="code">Код доступа</label><input id="code" placeholder="Например, AB-1234" required></div>
+    <div class="err" id="err"></div>
+    <button class="btn" type="submit">Войти</button>
+    <div class="hint">Код выдаёт управляющий пулом. Если вы его потеряли, напишите управляющему.</div>
+    <div class="hint" style="border-top:0;padding-top:0">Ещё не инвестор? <a class="linkbtn" href="#calculator">Посчитайте, сколько бы вы заработали →</a></div>
+  </div></form></div>`;
+  document.getElementById('lf').addEventListener('submit', e=>{
+    e.preventDefault();
+    const c = document.getElementById('code').value.trim().toUpperCase();
+    if (c === ADMIN_CODE) { state.user={role:'admin'}; save(); render(); return; }
+    const id = Object.keys(CODES).find(k=>CODES[k]===c);
+    if (!id) { document.getElementById('err').textContent='Код не найден. Проверьте раскладку и попробуйте ещё раз.'; return; }
+    state.user={role:'investor',id}; save(); render();
+  });
+}
+
+function header(title){
+  const months = DATA.months.map(m=>`<option value="${m.key}" ${m.key===state.monthKey?'selected':''}>${m.label}</option>`).join('');
+  return `<header class="top"><div class="wrap">
+    ${BRAND}
+    <span class="spacer"></span>
+    <span class="who">${esc(title)}</span>
+    <select class="month" id="month" aria-label="Отчётный месяц">${months}</select>
+    <a class="btn ghost" href="#calculator" style="text-decoration:none">Калькулятор</a>
+    <button class="btn ghost" id="out" type="button">Выйти</button>
+  </div></header>`;
+}
+function bindHeader(){
+  document.getElementById('month').onchange = e => { state.monthKey=e.target.value; render(); };
+  document.getElementById('out').onclick = () => { state.user=null; state.viewAs=null; save(); render(); };
+}
+const curMonth = () => DATA.months.find(m=>m.key===state.monthKey);
+const rowFor = (m,id) => m.investors.find(r=>r.id===id);
+
+/* ---------- helpers ---------- */
+const prevMonth = m => DATA.months[DATA.months.indexOf(m)-1];
+const prevRow = (m,id) => { const pm=prevMonth(m); return pm && rowFor(pm,id); };
+const monthGen = m => ({'Январь':'январю','Февраль':'февралю','Март':'марту','Апрель':'апрелю','Май':'маю','Июнь':'июню','Июль':'июлю','Август':'августу','Сентябрь':'сентябрю','Октябрь':'октябрю','Ноябрь':'ноябрю','Декабрь':'декабрю'})[m.label.split(' ')[0]];
+const delta = (a,b) => { const d=(a/b-1)*100; return (d>=0?'+':'−')+Math.abs(d).toFixed(1).replace('.',',')+'%'; };
+function calcSteps(m,r){
+  const p=m.pool;
+  if(r.parts.length===1){ const s=r.parts[0]; return `<ol class="calc">
+    <li><span class="n">1</span><span>Чистая прибыль пула<br><span class="op">после себестоимости, комиссий, налога и расходов</span></span><span class="amt">${tg(p.net)}</span></li>
+    <li><span class="n">2</span><span>Ваша доля в пуле<br><span class="op">${tg(s.capital)} из ${tg(m.periods[0].capital)}</span></span><span class="amt">${pct(s.share)}</span></li>
+    <li><span class="n">3</span><span>Прибыль на вашу долю<br><span class="op">${tg(p.net)} × ${pct(s.share)}</span></span><span class="amt">${tg(s.profit)}</span></li>
+    <li><span class="n">4</span><span>Ваша доля прибыли ${pct(r.rate,0)}<br><span class="op">остальные ${pct(1-r.rate,0)} получают управляющие</span></span><span class="amt">× ${pct(r.rate,0)}</span></li>
+    <li class="result"><span class="n">=</span><span><b>Ваш доход за месяц</b></span><span class="amt">${tg(r.dividend)}</span></li></ol>`; }
+  const sum=r.parts.reduce((a,s)=>a+s.profit,0);
+  const li=r.parts.map((s,i)=>{const per=m.periods[i]; return `<li><span class="n">${i+1}</span><span>${per.label} · ${per.days} дн.<br><span class="op">прибыль пула ${tg(per.net)} × ваша доля ${pct(s.share)} (${tg(s.capital)} из ${tg(per.capital)})</span></span><span class="amt">${tg(s.profit)}</span></li>`}).join('');
+  return `<p class="note" style="margin:0">В этом месяце капитал пула менялся, поэтому чистая прибыль ${tg(p.net)} разделена по дням.</p><ol class="calc">${li}
+    <li><span class="n">${r.parts.length+1}</span><span>Прибыль на вашу долю за месяц<br><span class="op">ваша доля прибыли ${pct(r.rate,0)}, остальное получают управляющие</span></span><span class="amt">${tg(sum)} × ${pct(r.rate,0)}</span></li>
+    <li class="result"><span class="n">=</span><span><b>Ваш доход за месяц</b></span><span class="amt">${tg(r.dividend)}</span></li></ol>`;
+}
+function flowsBlock(r){
+  if(!r.flows.length) return '<p class="muted" style="margin:0">Капитал в этом месяце не менялся.</p>';
+  const li=r.flows.map(f=>`<li><span class="n">${f.info?'·':f.amount>=0?'+':'−'}</span><span>${esc(f.label)}${f.paid?'<br><span class="op">выплачено вам, в капитал не добавлялось</span>':''}</span><span class="amt ${f.amount>0?'pos':''}">${f.info?'':(f.paid?'':(f.amount>=0?'+':'−'))+tg(Math.abs(f.amount))}</span></li>`).join('');
+  return `<ol class="calc">${li}<li class="result"><span class="n">=</span><span><b>Капитал на конец месяца</b></span><span class="amt">${tg(r.capitalEnd)}</span></li></ol>`;
+}
+function historyBlock(inv){
+  const rows=[]; for(const m of DATA.months){ const r=rowFor(m,inv.id); if(r) rows.push(`<tr><td>${m.label}</td><td>${tg(r.capitalStart)}</td><td class="pos">${tg(r.dividend)}</td><td>${pct(r.yield_)}</td><td>${tg(r.totalProfit)}</td></tr>`); if(m.key===state.monthKey) break; }
+  return `<div class="tbl-wrap"><table><thead><tr><th>Месяц</th><th>Капитал</th><th>Доход</th><th>%</th><th>Всего</th></tr></thead><tbody>${rows.reverse().join('')}</tbody></table></div>`;
+}
+
+/* ---------- charts ---------- */
+function capitalChart(inv){
+  // points: start (initial capital) + each month's capital up to selected month
+  const pts=[{label:'Старт', sub: new Date(inv.start+'T00:00:00').toLocaleDateString('ru-RU',{month:'short',year:'2-digit'}), v:inv.initial}];
+  for(const m of DATA.months){ const r=rowFor(m,inv.id);
+    if(r) r.parts.forEach((p,i)=>{ if(i===0||p.capital!==r.parts[i-1].capital) pts.push({label:(i?m.periods[i].label.split('–')[0]+' ':'')+m.label.split(' ')[0].slice(0,3).toLowerCase(), sub:m.key.slice(0,4), v:p.capital}); });
+    if(m.key===state.monthKey) break; }
+  const W=560,H=230,L=58,R=18,T=18,B=40;
+  const vals=pts.map(p=>p.v); let lo=Math.min(...vals)*0.9, hi=Math.max(...vals)*1.06;
+  const step=niceStep((hi-lo)/4); lo=Math.floor(lo/step)*step; hi=Math.ceil(hi/step)*step;
+  const x=i=> pts.length===1? (L+W-R)/2 : L+(W-L-R)*i/(pts.length-1);
+  const y=v=> T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  let g=''; for(let v=lo; v<=hi+1; v+=step){ g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-8}" y="${y(v)+4}" text-anchor="end">${short(v)}</text>`; }
+  const line=pts.map((p,i)=>`${i?'L':'M'}${x(i)},${y(p.v)}`).join('');
+  const area=line+`L${x(pts.length-1)},${H-B}L${x(0)},${H-B}Z`;
+  const dots=pts.map((p,i)=>{const last=i===pts.length-1;return `<circle cx="${x(i)}" cy="${y(p.v)}" r="${last?5.5:4}" fill="${last?'var(--gold)':'var(--surface)'}" stroke="${last?'var(--gold)':'var(--silver)'}" stroke-width="2"/>
+    <text class="ax" x="${x(i)}" y="${H-B+18}" text-anchor="middle">${esc(p.label)}</text><text class="ax" x="${x(i)}" y="${H-B+32}" text-anchor="middle">${esc(p.sub)}</text>
+    ${last?`<text x="${x(i)}" y="${y(p.v)-12}" text-anchor="${pts.length>1?'end':'middle'}" style="fill:var(--ink);font-size:12px;font-weight:600">${tg(p.v)}</text>`:''}`}).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Рост капитала">
+    <defs><linearGradient id="ga" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#C9CFDB" stop-opacity=".22"/><stop offset="1" stop-color="#C9CFDB" stop-opacity="0"/></linearGradient></defs>
+    ${g}<path d="${area}" fill="url(#ga)"/><path d="${line}" fill="none" stroke="var(--silver)" stroke-width="2.5" stroke-linejoin="round"/>${dots}</svg>`;
+}
+function dividendChart(inv){
+  const bars=[]; for(const m of DATA.months){ const r=rowFor(m,inv.id); if(r) bars.push({label:m.label.split(' ')[0], v:r.dividend, y:r.yield_}); if(m.key===state.monthKey) break; }
+  const W=560,H=200,L=58,R=18,T=26,B=28;
+  const hi0=Math.max(...bars.map(b=>b.v),1); const step=niceStep(hi0/3); const hi=Math.ceil(hi0*1.15/step)*step;
+  const y=v=>T+(H-T-B)*(1-v/hi);
+  const slots=Math.max(bars.length,6), bw=Math.min(54,(W-L-R)/slots*0.6);
+  const cx=i=>L+(W-L-R)*(i+0.5)/slots;
+  let g=''; for(let v=0; v<=hi+1; v+=step){ g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-8}" y="${y(v)+4}" text-anchor="end">${short(v)}</text>`; }
+  const b=bars.map((d,i)=>`<rect x="${cx(i)-bw/2}" y="${y(d.v)}" width="${bw}" height="${H-B-y(d.v)}" rx="4" fill="var(--gold)"/>
+    <text x="${cx(i)}" y="${y(d.v)-8}" text-anchor="middle" style="fill:var(--ink);font-size:12px;font-weight:600">${short(d.v)}</text>
+    <text class="ax" x="${cx(i)}" y="${H-B+17}" text-anchor="middle">${esc(d.label)}</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Доход по месяцам">${g}${b}</svg>`;
+}
+function niceStep(raw){ const p=Math.pow(10,Math.floor(Math.log10(raw||1))); const n=raw/p; return (n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*p; }
+
+/* ---------- pool block (shared by investor and admin) ---------- */
+function poolBlock(m){
+  const p=m.pool;
+  const rows=[['Продажи',p.sales,'pos'],['Себестоимость',-p.cogs,'neg'],['Комиссия Kaspi',-p.kaspi,'neg'],['Доставка Kaspi',-p.delivery,'neg'],['Налог 3%',-p.tax,'neg'],['Валовая прибыль',p.gross,'pos total'],['Операционные расходы',-p.expenses,'neg'],['Чистая прибыль',p.net,'pos total']];
+  const pl=rows.map(([l,v,c])=>`<div class="pl-row ${c}"><span>${l}</span><div class="bar"><span style="width:${Math.abs(v)/p.sales*100}%"></span></div><span class="num">${v<0?'−':''}${tg(Math.abs(v))}</span></div>`).join('');
+  const ex=m.expenses.map(([l,v])=>`<div class="pl-row neg w4"><span>${l}</span><div class="bar"><span style="width:${v/m.expenses[0][1]*100}%"></span></div><span class="num">${tg(v)}</span><span class="pc">${pct(v/p.sales,1)}</span></div>`).join('')
+    + `<div class="pl-row w4 total"><span>Итого</span><div class="bar" style="visibility:hidden"></div><span class="num">${tg(p.expenses)}</span><span class="pc">${pct(p.expenses/p.sales,1)}</span></div>`;
+  const top=m.top.map(t=>`<tr><td class="name">${esc(t.name)}</td><td>${fmt(t.qty)}</td><td>${tg(t.sales)}</td><td class="pos">${tg(t.profit)}</td><td>${pct(t.profit/t.sales,0)}</td></tr>`).join('');
+  return `<section class="grid2 fade">
+    <div class="panel"><div class="panel-h"><h2>Результат пула</h2><span class="muted">${m.period}</span></div>
+      <div class="pl">${pl}</div>
+      ${prevMonth(m)?`<p class="note" style="margin:0">К ${monthGen(prevMonth(m))}: продажи ${delta(p.sales,prevMonth(m).pool.sales)}, чистая прибыль ${delta(p.net,prevMonth(m).pool.net)}.</p>`:''}
+      <p class="note">${fmt(m.orders)} заказов, ${fmt(m.returns)} возвратов, ${fmt(p.skus)} товаров с продажами. Рентабельность по чистой прибыли ${pct(p.net/p.sales,1)}.</p></div>
+    <div class="panel"><div class="panel-h"><h2>Операционные расходы</h2><span class="muted">% от продаж</span></div><div class="pl">${ex}</div></div>
+  </section>
+  <section class="panel fade"><div class="panel-h"><h2>Лучшие товары месяца</h2><span class="muted">по прибыли</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Товар</th><th>Продано, шт</th><th>Выручка</th><th>Прибыль</th><th>Маржа</th></tr></thead><tbody>${top}</tbody></table></div></section>`;
+}
+
+/* ---------- investor view ---------- */
+function investorView(id, asAdmin){
+  const inv=invById(id), m=curMonth(), r=rowFor(m,id);
+  const title = asAdmin ? `Просмотр: ${inv.name}` : inv.name;
+  let body;
+  if(!r){
+    body=`<section class="hello"><span class="eyebrow">${m.label}</span><h1>Здравствуйте, ${esc(inv.name)}</h1></section>
+      <section class="panel"><span class="pill gold">Ожидает начислений</span><p style="margin:0">${esc(inv.pending||'В этом месяце начислений нет.')}</p>
+      <p class="muted" style="margin:0">Вложено: ${tg(inv.initial)}. Первый отчёт появится после закрытия месяца.</p></section>${poolBlock(m)}`;
+  } else {
+    const p=m.pool, lastShare=r.parts[r.parts.length-1].share, prev=prevRow(m,id);
+    body=`
+    <section class="hello fade"><span class="eyebrow">Отчёт за ${m.label.toLowerCase()}</span><h1>Здравствуйте, ${esc(inv.name.split(' ')[0])}</h1>
+      <span class="muted">Инвестор с ${dateRu(inv.start)}</span></section>
+    <section class="tiles fade">
+      <div class="tile hero"><span class="eyebrow">Доход за месяц</span><span class="v">${tg(r.dividend)}</span><span class="s">${pct(r.yield_)} на капитал${prev?' · '+delta(r.dividend,prev.dividend)+' к '+monthGen(prevMonth(m)):''}</span></div>
+      <div class="tile"><span class="eyebrow">Капитал в пуле</span><span class="v">${tg(r.capitalEnd)}</span><span class="s">${r.capitalEnd!==r.capitalStart?'на начало месяца '+tg(r.capitalStart):'вложено '+tg(r.initial)}</span></div>
+      <div class="tile"><span class="eyebrow">Прибыль за всё время</span><span class="v">${tg(r.totalProfit)}</span><span class="s">ROI ${pct(r.roi,1)} на ${tg(r.initial)}</span></div>
+      <div class="tile"><span class="eyebrow">Средняя доходность</span><span class="v">${pct(r.avgMonthly)}</span><span class="s">в месяц за ${String(r.months).replace('.',',')} мес.</span></div>
+    </section>
+    <section class="grid2 fade">
+      <div class="panel"><div class="panel-h"><h2>Как рассчитан ваш доход</h2><span class="muted">${m.period}</span></div>
+        ${calcSteps(m,r)}
+        <div class="share"><div class="panel-h"><span class="eyebrow">Ваша доля в пуле${r.parts.length>1?' на конец месяца':''}</span><span>${pct(lastShare)}</span></div><div class="share-bar"><span style="width:${lastShare*100}%"></span></div></div>
+      </div>
+      <div class="panel"><div class="panel-h"><h2>Капитал</h2><span class="muted">на начало каждого периода</span></div>
+        <div class="chart">${capitalChart(inv)}</div>
+        <div class="panel-h"><h2>Доход по месяцам</h2></div>
+        <div class="chart">${dividendChart(inv)}</div>
+        
+      </div>
+    </section>
+    <section class="grid2 fade">
+      <div class="panel"><div class="panel-h"><h2>Движение капитала</h2><span class="muted">${m.label}</span></div>${flowsBlock(r)}</div>
+      <div class="panel"><div class="panel-h"><h2>Ваша история</h2><span class="muted">по месяцам</span></div>${historyBlock(inv)}</div>
+    </section>
+    ${poolBlock(m)}`;
+  }
+  const back = asAdmin ? `<div><button class="btn ghost" id="back" type="button">← Все инвесторы</button></div>` : '';
+  app.innerHTML = header(title) + `<main class="wrap">${back}${body}<footer>Данные по отчёту управляющих за ${m.period}. Суммы в тенге, округлены до целого. Вопросы по расчёту задавайте управляющему пулом.</footer></main>`;
+  bindHeader();
+  if(asAdmin) document.getElementById('back').onclick=()=>{state.viewAs=null; render();};
+}
+
+/* ---------- admin view ---------- */
+function adminView(){
+  const m=curMonth(), p=m.pool;
+  const totalDiv=m.investors.reduce((s,r)=>s+r.dividend,0);
+  const rows=DATA.investors.map(inv=>{const r=rowFor(m,inv.id);
+    return r?`<tr class="click" data-id="${inv.id}"><td>${esc(inv.name)}</td><td>${tg(r.capitalEnd)}</td><td>${pct(r.parts[r.parts.length-1].share)}</td><td class="pos">${tg(r.dividend)}</td><td>${tg(r.totalProfit)}</td><td>${pct(r.roi,1)}</td><td><code>${CODES[inv.id]}</code></td></tr>`
+     :`<tr class="click" data-id="${inv.id}"><td>${esc(inv.name)} <span class="pill gold">с июля</span></td><td>${tg(inv.initial)}</td><td>—</td><td>—</td><td>—</td><td>—</td><td><code>${CODES[inv.id]}</code></td></tr>`}).join('');
+  app.innerHTML = header('Управляющий') + `<main class="wrap">
+    <section class="hello fade"><span class="eyebrow">${m.label} · обзор пула</span><h1>Все инвесторы</h1></section>
+    <section class="tiles fade">
+      <div class="tile hero"><span class="eyebrow">Чистая прибыль пула</span><span class="v">${tg(p.net)}</span><span class="s">${pct(p.net/p.sales,1)} от продаж</span></div>
+      <div class="tile"><span class="eyebrow">Капитал пула</span><span class="v">${tg(p.capital)}</span><span class="s">${m.investors.length} инвесторов${m.periods.length>1?' · с '+m.periods[1].label.split('–')[0]+' '+m.label.split(' ')[0].toLowerCase().slice(0,3)+': '+tg(m.periods[1].capital):''}</span></div>
+      <div class="tile"><span class="eyebrow">Инвесторам</span><span class="v">${tg(totalDiv)}</span><span class="s">${pct(totalDiv/m.investors.reduce((s,r)=>s+r.capitalStart,0))} на капитал</span></div>
+      <div class="tile"><span class="eyebrow">Управляющим</span><span class="v">${tg(p.net-totalDiv)}</span><span class="s">${pct((p.net-totalDiv)/p.net,1)} чистой прибыли</span></div>
+    </section>
+    <section class="panel fade"><div class="panel-h"><h2>Инвесторы</h2><span class="muted">нажмите на строку, чтобы открыть кабинет</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Инвестор</th><th>Капитал</th><th>Доля</th><th>Доход за месяц</th><th>Прибыль всего</th><th>ROI</th><th>Код входа</th></tr></thead><tbody>${rows}</tbody></table></div></section>
+    ${poolBlock(m)}
+    <footer>Коды входа видны только в режиме управляющего.</footer></main>`;
+  bindHeader();
+  app.querySelectorAll('tr.click').forEach(tr=>tr.onclick=()=>{state.viewAs=tr.dataset.id; render(); window.scrollTo(0,0);});
+}
+
+/* ---------- calculator for prospective investors ---------- */
+const RATE = 0.5;
+const monthYield = m => RATE * m.periods.reduce((s,p)=>s+p.net/p.capital,0);
+const calc = { amount: 1000000, start: DATA.months[0].key, mode: 'reinvest' };
+function simulate(){
+  const i0 = DATA.months.findIndex(m=>m.key===calc.start);
+  let cap = calc.amount, earned = 0; const rows=[];
+  for(const m of DATA.months.slice(i0)){
+    const y = monthYield(m), inc = cap*y; earned += inc;
+    rows.push({m, y, capStart:cap, inc, earned});
+    if(calc.mode==='reinvest') cap += inc;
+  }
+  return {rows, earned, capEnd: calc.mode==='reinvest'?cap:calc.amount};
+}
+function calcChart(rows){
+  const W=640,H=240,L=60,R=12,T=24,B=30;
+  const tops=rows.map(r=>calc.amount+r.earned); const hi0=Math.max(...tops);
+  const step=niceStep(hi0/4); const hi=Math.ceil(hi0*1.08/step)*step;
+  const y=v=>T+(H-T-B)*(1-v/hi); const slots=Math.max(rows.length,4); const bw=Math.min(64,(W-L-R)/slots*.58); const cx=i=>L+(W-L-R)*(i+.5)/slots;
+  let g=''; for(let v=0; v<=hi+1; v+=step) g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-8}" y="${y(v)+4}" text-anchor="end">${short(v)}</text>`;
+  const b=rows.map((r,i)=>`<rect x="${cx(i)-bw/2}" y="${y(calc.amount)}" width="${bw}" height="${H-B-y(calc.amount)}" fill="var(--silver-dim)" opacity=".55"/>
+    <rect x="${cx(i)-bw/2}" y="${y(calc.amount+r.earned)}" width="${bw}" height="${y(calc.amount)-y(calc.amount+r.earned)}" fill="var(--gold)"/>
+    <text x="${cx(i)}" y="${y(calc.amount+r.earned)-7}" text-anchor="middle" style="fill:var(--ink);font-size:11.5px;font-weight:600">+${short(r.earned)}</text>
+    <text class="ax" x="${cx(i)}" y="${H-B+17}" text-anchor="middle">${esc(r.m.label.split(' ')[0])}</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Рост вложений по месяцам">${g}${b}</svg>`;
+}
+function calcView(){
+  const first = DATA.months[0], last = DATA.months[DATA.months.length-1];
+  const GEN={'Январь':'января','Февраль':'февраля','Март':'марта','Апрель':'апреля','Май':'мая','Июнь':'июня','Июль':'июля','Август':'августа','Сентябрь':'сентября','Октябрь':'октября','Ноябрь':'ноября','Декабрь':'декабря'};
+  const opts = DATA.months.map(m=>{const [mn,yr]=m.label.split(' '); return `<option value="${m.key}" ${m.key===calc.start?'selected':''}>с ${GEN[mn]||mn} ${yr}</option>`}).join('');
+  const presets=[500000,1000000,2000000,5000000,10000000].map(v=>`<button type="button" class="chip ${v===calc.amount?'on':''}" data-v="${v}">${short(v)} ₸</button>`).join('');
+  const head = state.user ? header(state.user.role==='admin'?'Управляющий':invById(state.user.id).name) :
+    `<header class="top"><div class="wrap">${BRAND}<span class="spacer"></span><a class="btn ghost" href="#" style="text-decoration:none">Войти в кабинет</a></div></header>`;
+  app.innerHTML = head + `<main class="wrap">
+    <section class="hello fade"><span class="eyebrow">Калькулятор доходности</span><h1>Сколько бы вы заработали с Trendo</h1>
+      <span class="muted">Расчёт по фактическим результатам пула за ${first.label.toLowerCase()} – ${last.label.toLowerCase()}, без прогнозов.</span></section>
+    <section class="panel fade"><form class="calc-form" id="cf" autocomplete="off">
+      <div class="field"><label for="calc-amount">Сумма инвестиций, ₸</label><input id="calc-amount" inputmode="numeric" value="${fmt(calc.amount)}"><div class="chips">${presets}</div></div>
+      <div class="field"><label for="calc-start">Если бы вы вошли</label><select id="calc-start">${opts}</select></div>
+      <div class="field"><label>Что делать с прибылью</label><div class="seg" role="group"><button type="button" data-mode="reinvest" class="${calc.mode==='reinvest'?'on':''}">Реинвестировать</button><button type="button" data-mode="payout" class="${calc.mode==='payout'?'on':''}">Забирать</button></div></div>
+    </form></section>
+    <div id="calc-out"></div>
+  </main>`;
+  if(state.user) bindHeader();
+  const amt=document.getElementById('calc-amount');
+  amt.oninput=()=>{ const v=parseInt(amt.value.replace(/\D/g,''),10)||0; calc.amount=v; drawCalc(); app.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',+c.dataset.v===v)); };
+  amt.onblur=()=>{ amt.value=fmt(calc.amount); };
+  app.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ calc.amount=+c.dataset.v; amt.value=fmt(calc.amount); app.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c)); drawCalc(); });
+  document.getElementById('calc-start').onchange=e=>{ calc.start=e.target.value; drawCalc(); };
+  app.querySelectorAll('.seg button').forEach(bn=>bn.onclick=()=>{ calc.mode=bn.dataset.mode; app.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===bn)); drawCalc(); });
+  drawCalc();
+}
+function drawCalc(){
+  const out=document.getElementById('calc-out'); if(!out) return;
+  if(calc.amount<100000){ out.innerHTML='<section class="panel"><p class="muted" style="margin:0">Введите сумму от 100 000 ₸.</p></section>'; return; }
+  const s=simulate(), n=s.rows.length, roi=s.earned/calc.amount;
+  const rows=s.rows.map(r=>`<tr><td>${r.m.label}</td><td>${pct(r.y)}</td><td>${tg(r.capStart)}</td><td class="pos">+${tg(r.inc)}</td><td>${calc.mode==='reinvest'?tg(r.capStart+r.inc):tg(r.earned)+' выплачено'}</td></tr>`).join('');
+  out.innerHTML=`<div style="display:grid;gap:28px">
+    <section class="tiles fade">
+      <div class="tile hero"><span class="eyebrow">Вы бы заработали</span><span class="v">${tg(s.earned)}</span><span class="s">за ${n} мес.</span></div>
+      <div class="tile"><span class="eyebrow">${calc.mode==='reinvest'?'Капитал сейчас':'Капитал в пуле'}</span><span class="v">${tg(s.capEnd)}</span><span class="s">вложено ${tg(calc.amount)}</span></div>
+      <div class="tile"><span class="eyebrow">Доходность за период</span><span class="v">${pct(roi,1)}</span><span class="s">на вложенную сумму</span></div>
+      <div class="tile"><span class="eyebrow">В среднем в месяц</span><span class="v">${pct(s.rows.reduce((a,r)=>a+r.y,0)/n)}</span><span class="s">доходность инвестора</span></div>
+    </section>
+    <section class="fade" style="display:grid;gap:16px">
+      <div class="panel"><div class="panel-h"><h2>Рост вложений</h2><div class="legend"><span><i style="background:var(--silver-dim)"></i>Вложено</span><span><i style="background:var(--gold)"></i>Заработано</span></div></div><div class="chart">${calcChart(s.rows)}</div></div>
+      <div class="panel"><div class="panel-h"><h2>По месяцам</h2><span class="muted">${calc.mode==='reinvest'?'с реинвестом':'с ежемесячной выплатой'}</span></div>
+        <div class="tbl-wrap"><table><thead><tr><th>Месяц</th><th>Доход­ность</th><th>Капитал</th><th>Доход</th><th>${calc.mode==='reinvest'?'Итог':'Всего'}</th></tr></thead><tbody>${rows}</tbody></table></div></div>
+    </section>
+    ${typeof PUBLIC!=='undefined'?'':`<section class="panel fade"><h2>Как устроен пул</h2>
+      <ol class="calc">
+        <li><span class="n">1</span><span>Вы вносите деньги в общий пул<br><span class="op">капитал идёт на закуп товаров для продажи на Kaspi</span></span><span class="amt"></span></li>
+        <li><span class="n">2</span><span>Через 25 дней деньги начинают работать<br><span class="op">это время на аналитику товаров, закуп и логистику</span></span><span class="amt">25 дн.</span></li>
+        <li><span class="n">3</span><span>Каждый месяц вы получаете долю чистой прибыли<br><span class="op">пропорционально вашему капиталу в пуле, 50% прибыли на вашу долю</span></span><span class="amt">50%</span></li>
+        <li><span class="n">4</span><span>Прибыль можно забирать или оставлять в пуле<br><span class="op">реинвест увеличивает капитал и доход следующих месяцев</span></span><span class="amt"></span></li>
+      </ol>
+      <p class="disclaimer">Расчёт сделан по фактическим результатам пула за прошедшие месяцы и показывает, сколько получил бы инвестор с такой суммой. Прошлая доходность не гарантирует такую же в будущем: результат зависит от продаж и расходов каждого месяца.</p>
+    </section>`}</div>`;
+}
+window.addEventListener('hashchange', ()=>{ render(); window.scrollTo(0,0); });
+
+function render(){
+  if(location.hash==='#calculator') return calcView();
+  if(!state.user) return login();
+  if(state.user.role==='admin') return state.viewAs ? investorView(state.viewAs,true) : adminView();
+  investorView(state.user.id,false);
+}
+render();
+</script>
