@@ -123,6 +123,15 @@ tr.click{cursor:pointer}
 tr.click:hover td{background:var(--bg)}
 .pos{color:var(--accent)}
 footer{font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+/* comparison */
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.cmp{display:grid;gap:14px}
+.cmp-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 150px;gap:14px;align-items:center}
+.cmp-name{display:grid;gap:2px;min-width:0}.cmp-name span{font-size:.78rem;color:var(--muted)}
+.cmp-bar{height:14px;border-radius:7px;background:rgba(201,207,219,.08);overflow:hidden}.cmp-bar span{display:block;height:100%;border-radius:7px}
+.cmp-num{text-align:right;font-family:var(--display);font-weight:700;white-space:nowrap;display:grid}.cmp-num small{font-family:var(--body);font-weight:500;font-size:.75rem;color:var(--muted)}
+.cmp-num.neg{color:var(--neg)}
+@media (max-width:640px){.cmp-row{grid-template-columns:minmax(0,1fr) auto}.cmp-bar{grid-column:1/-1;order:3}}
 /* calculator */
 .calc-form{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:end}
 @media (max-width:760px){.calc-form{grid-template-columns:minmax(0,1fr)}}
@@ -231,6 +240,96 @@ function historyBlock(inv){
   return `<div class="tbl-wrap"><table><thead><tr><th>Месяц</th><th>Капитал</th><th>Доход</th><th>%</th><th>Всего</th></tr></thead><tbody>${rows.reverse().join('')}</tbody></table></div>`;
 }
 
+/* ---------- investor analytics: growth, efficiency, comparison ---------- */
+const BENCH = DATA.benchmarks || null;
+const monthDays = m => m.periods.reduce((s,p)=>s+p.days,0);
+const avgCapital = (m,r) => r.parts.reduce((s,p,i)=>s+p.capital*m.periods[i].days,0)/monthDays(m);
+function investorSeries(inv){
+  const out=[]; let deposits=0, withdrawn=0, paid=0, first=null;
+  const ms=DATA.months; const upto=ms.findIndex(m=>m.key===state.monthKey);
+  for(let i=0;i<=upto;i++){ const m=ms[i], r=rowFor(m,inv.id); if(!r) continue;
+    if(!first) first=r;
+    for(const f of r.flows){ if(/^Пополнение/.test(f.label)) deposits+=f.amount; if(/^(Вывод|Изъятие)/.test(f.label)) withdrawn+=-f.amount; if(f.paid) paid+=-f.amount; }
+    const next=ms[i+1]&&i<upto?rowFor(ms[i+1],inv.id):null;
+    const status=!next?'accrued':next.flows.some(f=>f.paid)?'paid':'reinvested';
+    const avg=avgCapital(m,r);
+    out.push({m,r,avg,ret:r.dividend/avg,status,netInvested:(first.parts[0].capital)+deposits,capEnd:r.capitalEnd,paidSoFar:paid,value:r.capitalEnd+r.dividend+paid+withdrawn});
+  }
+  if(!out.length) return null;
+  const n=out.length, twr=out.reduce((a,s)=>a*(1+s.ret),1)-1;
+  const days=out.reduce((s,x)=>s+monthDays(x.m),0);
+  const annual=out.reduce((s,x)=>s+x.ret,0)*365/days, annualC=Math.pow(1+twr,365/days)-1;
+  const earned=out.reduce((s,x)=>s+x.r.dividend,0);
+  const alt=rate=>out.reduce((s,x)=>s+x.avg*rate*monthDays(x.m)/365,0);
+  return {out,n,twr,annual,annualC,earned,days,alt,
+    invested:out[0].r.initial>0?null:null,
+    deposits, withdrawn, startCapital:out[0].r.parts[0].capital};
+}
+function growthChart(S){
+  const pts=[{label:'Старт', v:S.startCapital, inv:S.startCapital, tot:S.startCapital}].concat(S.out.map(x=>({label:x.m.label.split(' ')[0].slice(0,3).toLowerCase(), v:x.capEnd+(x.status==='paid'?0:x.r.dividend), inv:x.netInvested, tot:x.value})));
+  const W=620,H=250,L=60,R=16,T=20,B=30;
+  const all=pts.flatMap(p=>[p.v,p.inv,p.tot]); let lo=Math.min(...all)*.92, hi=Math.max(...all)*1.05;
+  const step=niceStep((hi-lo)/4); lo=Math.max(0,Math.floor(lo/step)*step); hi=Math.ceil(hi/step)*step;
+  const x=i=>L+(W-L-R)*i/(pts.length-1), y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  let g=''; for(let v=lo; v<=hi+1; v+=step) g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-8}" y="${y(v)+4}" text-anchor="end">${short(v)}</text>`;
+  const path=k=>pts.map((p,i)=>`${i?'L':'M'}${x(i)},${y(p[k])}`).join('');
+  const area=path('tot')+`L${x(pts.length-1)},${y(lo)}L${x(0)},${y(lo)}Z`;
+  const labels=pts.map((p,i)=>`<text class="ax" x="${x(i)}" y="${H-B+18}" text-anchor="middle">${esc(p.label)}</text>`).join('');
+  const last=pts[pts.length-1];
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Рост капитала">
+    <defs><linearGradient id="gg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#D6B263" stop-opacity=".28"/><stop offset="1" stop-color="#D6B263" stop-opacity="0"/></linearGradient></defs>
+    ${g}<path d="${area}" fill="url(#gg)"/>
+    <path d="${path('inv')}" fill="none" stroke="var(--silver-dim)" stroke-width="2" stroke-dasharray="5 5"/>
+    <path d="${path('v')}" fill="none" stroke="var(--silver)" stroke-width="2.2"/>
+    <path d="${path('tot')}" fill="none" stroke="var(--gold)" stroke-width="2.6"/>
+    <circle cx="${x(pts.length-1)}" cy="${y(last.tot)}" r="5" fill="var(--gold)"/>
+    <text x="${x(pts.length-1)-8}" y="${y(last.tot)-10}" text-anchor="end" style="fill:var(--ink);font-size:12px;font-weight:700">${tg(last.tot)}</text>
+    ${labels}</svg>`;
+}
+function efficiencyBlock(inv,r){
+  const S=investorSeries(inv); if(!S) return '';
+  const infl=BENCH?BENCH.inflation.rate:0, real=(1+S.annual)/(1+infl)-1;
+  const hist=S.out.slice().reverse().map(x=>`<tr><td>${x.m.label}</td><td>${tg(x.avg)}</td><td class="pos">+${tg(x.r.dividend)}</td><td>${pct(x.ret)}</td><td>${x.status==='reinvested'?'<span class="pill">в капитал</span>':x.status==='paid'?'<span class="pill gold">выплачен</span>':'<span class="pill gold">начислен</span>'}</td><td>${tg(x.value)}</td></tr>`).join('');
+  return `<section class="fade" style="display:grid;gap:16px">
+    <div class="sec-h"><h2 style="font-size:1.3rem">Как рос ваш капитал</h2><span class="muted">${S.n} мес. с ${S.out[0].m.label.toLowerCase()}</span></div>
+    <div class="tiles">
+      <div class="tile"><span class="eyebrow">Заработано за ${S.n} мес.</span><span class="v">${tg(S.earned)}</span><span class="s">на капитал около ${short(S.out.reduce((s,x)=>s+x.avg,0)/S.n)} ₸</span></div>
+      <div class="tile"><span class="eyebrow">Рост за период</span><span class="v">${pct(S.twr,1)}</span><span class="s">с учётом реинвеста</span></div>
+      <div class="tile"><span class="eyebrow">В пересчёте на год</span><span class="v">${pct(S.annual,0)}</span><span class="s">годовых, с реинвестом до ${pct(S.annualC,0)}</span></div>
+      <div class="tile"><span class="eyebrow">После инфляции</span><span class="v">${pct(real,0)}</span><span class="s">реальный рост, инфляция ${pct(infl,1)}</span></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><div class="panel-h"><h2>Рост капитала</h2><div class="legend"><span><i style="background:var(--gold)"></i>Всего получено</span><span><i style="background:var(--silver)"></i>Капитал в пуле</span><span><i style="background:var(--silver-dim)"></i>Внесено</span></div></div>
+        <div class="chart">${growthChart(S)}</div>
+        <p class="note" style="margin:0">Золотая линия — капитал с начисленным доходом плюс всё, что вы уже получили на руки: дивиденды и выведенный капитал. Пунктир — сколько вы внесли. Разница между ними и есть ваш заработок.</p></div>
+      <div class="panel"><div class="panel-h"><h2>Месяц за месяцем</h2><span class="muted">доходность на средний капитал</span></div>
+        <div class="tbl-wrap"><table><thead><tr><th>Месяц</th><th>Капитал</th><th>Доход</th><th>%</th><th>Дивиденд</th><th>Итого</th></tr></thead><tbody>${hist}</tbody></table></div></div>
+    </div>
+    ${compareBlock(S)}
+  </section>`;
+}
+function compareBlock(S){
+  if(!BENCH) return '';
+  const avg=S.out.reduce((s,x)=>s+x.avg,0)/S.n;
+  const dep=S.alt(BENCH.deposit.rate), rlt=S.alt(BENCH.realty.rent+BENCH.realty.growth), inf=S.alt(BENCH.inflation.rate);
+  const items=[
+    {k:'Trendo Analytics',v:S.earned,a:S.annual,c:'var(--gold-grad)',note:'фактический доход по отчётам'},
+    {k:BENCH.deposit.label,v:dep,a:BENCH.deposit.rate,c:'var(--silver-grad)',note:BENCH.deposit.note},
+    {k:BENCH.realty.label,v:rlt,a:BENCH.realty.rent+BENCH.realty.growth,c:'var(--silver-grad)',note:BENCH.realty.note},
+    {k:'Деньги дома',v:-inf,a:-BENCH.inflation.rate,c:'var(--neg)',note:'потеря покупательной силы из-за инфляции '+pct(BENCH.inflation.rate,1)},
+  ];
+  const max=Math.max(...items.map(i=>Math.abs(i.v)));
+  const rows=items.map(i=>`<div class="cmp-row"><div class="cmp-name"><b>${esc(i.k)}</b><span>${esc(i.note)}</span></div>
+      <div class="cmp-bar"><span style="width:${Math.abs(i.v)/max*100}%;background:${i.c}"></span></div>
+      <div class="cmp-num ${i.v<0?'neg':''}">${i.v<0?'−':'+'}${tg(Math.abs(i.v))}<small>${i.a<0?'−':''}${pct(Math.abs(i.a),1)} годовых</small></div></div>`).join('');
+  const extra=S.earned-dep;
+  return `<div class="panel"><div class="panel-h"><h2>Если бы вы вложили эти деньги иначе</h2><span class="muted">та же сумма, те же ${S.n} мес.</span></div>
+    <p class="note" style="margin:0">Сравнение на вашем среднем капитале ${tg(avg)} за ${S.days} дн. Для депозита и недвижимости взяты средние рыночные ставки по Казахстану на ${BENCH.asOf}.</p>
+    <div class="cmp">${rows}</div>
+    <p style="margin:0">${extra>0?`Пул принёс вам на <b class="pos">${tg(extra)}</b> больше, чем банковский депозит за тот же срок, то есть в <b class="pos">${(S.earned/dep).toFixed(1).replace('.',',')} раза</b> больше.`:`За этот срок пул принёс ${tg(S.earned)}, депозит дал бы ${tg(dep)}.`}</p>
+    <p class="disclaimer" style="margin:0">Ставки альтернатив ориентировочные и не учитывают налоги, комиссии, простои аренды и расходы на сделку с недвижимостью. Доход пула фактический, но не гарантирован в будущем.</p></div>`;
+}
+
 /* ---------- charts ---------- */
 function capitalChart(inv){
   // points: start (initial capital) + each month's capital up to selected month
@@ -271,7 +370,7 @@ function niceStep(raw){ const p=Math.pow(10,Math.floor(Math.log10(raw||1))); con
 /* ---------- pool block (shared by investor and admin) ---------- */
 function poolBlock(m){
   const p=m.pool;
-  const rows=[['Продажи',p.sales,'pos'],['Себестоимость',-p.cogs,'neg'],['Комиссия Kaspi',-p.kaspi,'neg'],['Доставка Kaspi',-p.delivery,'neg'],['Налог 3%',-p.tax,'neg'],['Валовая прибыль',p.gross,'pos total'],['Операционные расходы',-p.expenses,'neg'],['Чистая прибыль',p.net,'pos total']];
+  const rows=[['Продажи',p.sales,'pos'],['Себестоимость',-p.cogs,'neg'],['Комиссия Kaspi',-p.kaspi,'neg'],['Доставка Kaspi',-p.delivery,'neg'],['Налог 3%',-p.tax,'neg'],['Валовая прибыль',p.gross,'pos total'],...(p.partners?[['Доход Trendo partners',p.partners,'pos']]:[]),['Операционные расходы',-p.expenses,'neg'],['Чистая прибыль',p.net,'pos total']];
   const pl=rows.map(([l,v,c])=>`<div class="pl-row ${c}"><span>${l}</span><div class="bar"><span style="width:${Math.abs(v)/p.sales*100}%"></span></div><span class="num">${v<0?'−':''}${tg(Math.abs(v))}</span></div>`).join('');
   const ex=m.expenses.map(([l,v])=>`<div class="pl-row neg w4"><span>${l}</span><div class="bar"><span style="width:${v/m.expenses[0][1]*100}%"></span></div><span class="num">${tg(v)}</span><span class="pc">${pct(v/p.sales,1)}</span></div>`).join('')
     + `<div class="pl-row w4 total"><span>Итого</span><div class="bar" style="visibility:hidden"></div><span class="num">${tg(p.expenses)}</span><span class="pc">${pct(p.expenses/p.sales,1)}</span></div>`;
@@ -304,8 +403,8 @@ function investorView(id, asAdmin){
     <section class="tiles fade">
       <div class="tile hero"><span class="eyebrow">Доход за месяц</span><span class="v">${tg(r.dividend)}</span><span class="s">${pct(r.yield_)} на капитал${prev?' · '+delta(r.dividend,prev.dividend)+' к '+monthGen(prevMonth(m)):''}</span></div>
       <div class="tile"><span class="eyebrow">Капитал в пуле</span><span class="v">${tg(r.capitalEnd)}</span><span class="s">${r.capitalEnd!==r.capitalStart?'на начало месяца '+tg(r.capitalStart):'вложено '+tg(r.initial)}</span></div>
-      <div class="tile"><span class="eyebrow">Прибыль за всё время</span><span class="v">${tg(r.totalProfit)}</span><span class="s">ROI ${pct(r.roi,1)} на ${tg(r.initial)}</span></div>
-      <div class="tile"><span class="eyebrow">Средняя доходность</span><span class="v">${pct(r.avgMonthly)}</span><span class="s">в месяц за ${String(r.months).replace('.',',')} мес.</span></div>
+      <div class="tile"><span class="eyebrow">Прибыль за всё время</span><span class="v">${tg(r.totalProfit)}</span><span class="s">за ${String(r.months).replace('.',',')} мес. в пуле</span></div>
+      <div class="tile"><span class="eyebrow">Средняя доходность</span><span class="v">${pct(r.avgMonthly)}</span><span class="s">в месяц за всё время</span></div>
     </section>
     <section class="grid2 fade">
       <div class="panel"><div class="panel-h"><h2>Как рассчитан ваш доход</h2><span class="muted">${m.period}</span></div>
@@ -314,15 +413,13 @@ function investorView(id, asAdmin){
       </div>
       <div class="panel"><div class="panel-h"><h2>Капитал</h2><span class="muted">на начало каждого периода</span></div>
         <div class="chart">${capitalChart(inv)}</div>
-        <div class="panel-h"><h2>Доход по месяцам</h2></div>
-        <div class="chart">${dividendChart(inv)}</div>
-        
       </div>
     </section>
     <section class="grid2 fade">
       <div class="panel"><div class="panel-h"><h2>Движение капитала</h2><span class="muted">${m.label}</span></div>${flowsBlock(r)}</div>
-      <div class="panel"><div class="panel-h"><h2>Ваша история</h2><span class="muted">по месяцам</span></div>${historyBlock(inv)}</div>
+      <div class="panel"><div class="panel-h"><h2>Доход по месяцам</h2></div><div class="chart">${dividendChart(inv)}</div></div>
     </section>
+    ${efficiencyBlock(inv,r)}
     ${poolBlock(m)}`;
   }
   const back = asAdmin ? `<div><button class="btn ghost" id="back" type="button">← Все инвесторы</button></div>` : '';
@@ -419,6 +516,11 @@ function drawCalc(){
       <div class="tile"><span class="eyebrow">В среднем в месяц</span><span class="v">${pct(s.rows.reduce((a,r)=>a+r.y,0)/n)}</span><span class="s">доходность инвестора</span></div>
     </section>
     <section class="fade" style="display:grid;gap:16px">
+      ${(()=>{const B=DATA.benchmarks; if(!B) return ''; const yrs=s.rows.reduce((d,r)=>d+r.m.periods.reduce((a,p)=>a+p.days,0),0)/365;
+      const comp=r=>calc.mode==='reinvest'?calc.amount*(Math.pow(1+r,yrs)-1):calc.amount*r*yrs;
+      const items=[['Trendo Analytics',s.earned,'var(--gold-grad)','фактическая доходность пула'],[B.deposit.label,comp(B.deposit.rate),'var(--silver-grad)',pct(B.deposit.rate,0)+' годовых'],[B.realty.label,calc.amount*(B.realty.rent+B.realty.growth)*yrs,'var(--silver-grad)','аренда '+pct(B.realty.rent,0)+' + рост цен '+pct(B.realty.growth,1)],['Деньги дома',-calc.amount*B.inflation.rate*yrs,'var(--neg)','инфляция '+pct(B.inflation.rate,1)]];
+      const max=Math.max(...items.map(i=>Math.abs(i[1])));
+      return `<div class="panel"><div class="panel-h"><h2>Сравнение с другими вариантами</h2><span class="muted">${tg(calc.amount)} за тот же срок</span></div><div class="cmp">${items.map(i=>`<div class="cmp-row"><div class="cmp-name"><b>${esc(i[0])}</b><span>${esc(i[3])}</span></div><div class="cmp-bar"><span style="width:${Math.abs(i[1])/max*100}%;background:${i[2]}"></span></div><div class="cmp-num ${i[1]<0?'neg':''}">${i[1]<0?'−':'+'}${tg(Math.abs(i[1]))}</div></div>`).join('')}</div><p class="note" style="margin:0">Ставки по Казахстану на ${B.asOf}, ориентировочно, без налогов и комиссий.</p></div>`;})()}
       <div class="panel"><div class="panel-h"><h2>Рост вложений</h2><div class="legend"><span><i style="background:var(--silver-dim)"></i>Вложено</span><span><i style="background:var(--gold)"></i>Заработано</span></div></div><div class="chart">${calcChart(s.rows)}</div></div>
       <div class="panel"><div class="panel-h"><h2>По месяцам</h2><span class="muted">${calc.mode==='reinvest'?'с реинвестом':'с ежемесячной выплатой'}</span></div>
         <div class="tbl-wrap"><table><thead><tr><th>Месяц</th><th>Доход­ность</th><th>Капитал</th><th>Доход</th><th>${calc.mode==='reinvest'?'Итог':'Всего'}</th></tr></thead><tbody>${rows}</tbody></table></div></div>

@@ -61,7 +61,7 @@ for m in data["months"]:
     pub_months.append(pm)
 pub = (here / "calculator" / "template.html").read_text()
 pub = (pub.replace("/*STYLE*/", style).replace("/*HELPERS*/", helpers)
-          .replace("/*DATA*/null", json.dumps({"months": pub_months}, ensure_ascii=False)))
+          .replace("/*DATA*/null", json.dumps({"months": pub_months, "benchmarks": data.get("benchmarks")}, ensure_ascii=False)))
 for bad in ["CODES", "ADMIN", "investors\":"] + [i["name"] for i in data["investors"]] + list(CODES.values()):
     assert bad not in pub, bad
 (here / "calculator" / "index.html").write_text(pub)
