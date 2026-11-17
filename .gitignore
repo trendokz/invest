@@ -10,3 +10,5 @@ private/
 # Собранный кабинет содержит данные всех инвесторов
 cabinet/index.html
 dist/cabinet/
+
+__pycache__/
