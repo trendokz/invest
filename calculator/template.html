@@ -20,6 +20,14 @@ section[id]{scroll-margin-top:84px}
 .month-tabs{display:flex;gap:6px;flex-wrap:wrap}
 .month-tabs button{border:1px solid rgba(201,207,219,.25);background:transparent;color:var(--silver);border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:.85rem}
 .month-tabs button.on{border-color:var(--gold);color:var(--gold);background:var(--gold-soft)}
+.sales-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.sales-grid{grid-template-columns:minmax(0,1fr)}}
+.chg{display:inline-flex;align-items:center;gap:4px;font-weight:700;font-size:.85rem;border-radius:99px;padding:2px 9px}
+.chg.up{color:#7FD8A6;background:rgba(127,216,166,.12)}.chg.down{color:var(--neg);background:rgba(238,139,118,.12)}
+.niche{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr) 64px 72px;gap:12px;align-items:center;font-size:.9rem}
+.niche .bar{height:12px;border-radius:6px;background:rgba(201,207,219,.08);overflow:hidden}.niche .bar span{display:block;height:100%;border-radius:6px;background:var(--gold-grad)}
+.niche .sh{text-align:right;font-family:var(--display);font-weight:700}.niche .pp{text-align:right;font-size:.8rem}
+@media (max-width:560px){.niche{grid-template-columns:minmax(0,1fr) 54px 64px}.niche .bar{grid-column:1/-1;order:3}}
 </style>
 
 <div id="app"></div>
@@ -49,6 +57,46 @@ function trendChart(){
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Продажи, чистая прибыль и доходность инвестора по месяцам">${g}${bars}<path d="${line}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="4 4"/>${dots}</svg>`;
 }
 
+const SALES = DATA.sales;
+const chg=(a,b)=>{ if(!b) return ''; const d=(a/b-1)*100; return `<span class="chg ${d>=0?'up':'down'}">${d>=0?'▲':'▼'} ${Math.abs(d).toFixed(1).replace('.',',')}%</span>`; };
+const dRu=s=>new Date(s+'T00:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
+function dailyChart(){
+  const ds=SALES.daily, W=680,H=220,L=52,R=10,T=16,B=26;
+  const hi0=Math.max(...ds.map(d=>d.revenue)); const step=niceStep(hi0/4), hi=Math.ceil(hi0*1.05/step)*step;
+  const bw=(W-L-R)/ds.length, y=v=>T+(H-T-B)*(1-v/hi);
+  let g=''; for(let v=0; v<=hi+1; v+=step) g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-8}" y="${y(v)+4}" text-anchor="end">${short(v)}</text>`;
+  const bars=ds.map((d,i)=>`<rect x="${L+i*bw+1}" y="${y(d.revenue)}" width="${Math.max(1,bw-2)}" height="${H-B-y(d.revenue)}" rx="1.5" fill="var(--silver-dim)" opacity="${i>=ds.length-7?1:.55}"><title>${dRu(d.d)}: ${tg(d.revenue)}, ${d.orders} заказов</title></rect>`).join('');
+  const ma=ds.map((d,i)=>{const s=ds.slice(Math.max(0,i-6),i+1); return s.reduce((a,x)=>a+x.revenue,0)/s.length;});
+  const line=ma.map((v,i)=>`${i?'L':'M'}${L+i*bw+bw/2},${y(v)}`).join('');
+  const ticks=ds.map((d,i)=>(i%10===0||i===ds.length-1)?`<text class="ax" x="${L+i*bw+bw/2}" y="${H-B+16}" text-anchor="middle">${dRu(d.d).replace(/ \S+$/,m=>' '+m.trim().slice(0,3))}</text>`:'').join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Выручка по дням">${g}${bars}<path d="${line}" fill="none" stroke="var(--gold)" stroke-width="2.4"/>${ticks}</svg>`;
+}
+function salesSection(){
+  if(!SALES) return '';
+  const S=SALES, d=S.day, w=S.week, m=S.days30;
+  const card=(t,sub,x)=>`<div class="tile"><span class="eyebrow">${t}</span><span class="v">${tg(x.revenue)}</span><span class="s">${fmt(x.orders)} заказов · ${chg(x.revenue,x.prevRevenue)}</span><span class="s">${sub}</span></div>`;
+  const avg=m.revenue/m.orders, ret=m.returns/m.revenue;
+  const maxSh=Math.max(...S.niches.map(n=>n.share));
+  const ni=S.niches.filter(n=>n.name!=='Другое').concat(S.niches.filter(n=>n.name==='Другое')).map(n=>{const pp=(n.share-n.prevShare)*100;
+    return `<div class="niche"><span>${esc(n.name)}</span><div class="bar"><span style="width:${n.share/maxSh*100}%"></span></div><span class="sh">${pct(n.share,1)}</span><span class="pp ${pp>=0?'pos':'muted'}">${pp>=0?'+':'−'}${Math.abs(pp).toFixed(1).replace('.',',')} п.п.</span></div>`}).join('');
+  return `<section id="sales" class="fade" style="display:grid;gap:16px">
+    <div class="sec-h"><h2>Продажи на Kaspi</h2><span class="muted">данные на ${dRu(S.asOf)} ${S.asOf.slice(0,4)}</span></div>
+    <div class="sales-grid">
+      ${card('За день',`${dRu(S.asOf)}, к предыдущему дню`,d)}
+      ${card('За неделю',`${dRu(w.from)} – ${dRu(S.asOf)}, к прошлой неделе`,w)}
+      ${card('За 30 дней',`к предыдущим 30 дням`,m)}
+    </div>
+    <div class="grid2">
+      <div class="panel"><div class="panel-h"><h2>Выручка по дням</h2><div class="legend"><span><i style="background:var(--silver-dim)"></i>За день</span><span><i style="background:var(--gold)"></i>Среднее за 7 дней</span></div></div>
+        <div class="chart">${dailyChart()}</div>
+        <p class="note" style="margin:0">Средний чек за 30 дней ${tg(avg)}, возвраты ${pct(ret,1)} от выручки.</p></div>
+      <div class="panel"><div class="panel-h"><h2>Ниши</h2><span class="muted">доля выручки за 30 дней и изменение</span></div>
+        <div style="display:grid;gap:11px">${ni}</div></div>
+    </div>
+    <p class="note" style="margin:0">Выручка по заказам Kaspi до возвратов и корректировок, поэтому она отличается от итогов месячных отчётов ниже. Прибыль инвесторов считается только по месячному отчёту.</p>
+  </section>`;
+}
+
 function render(){
   const ms=DATA.months, last=ms[ms.length-1], first=ms[0];
   const sumSales=ms.reduce((s,m)=>s+m.pool.sales,0), sumNet=ms.reduce((s,m)=>s+m.pool.net,0), sumInv=ms.reduce((s,m)=>s+m.paidToInvestors,0);
@@ -59,7 +107,7 @@ function render(){
   const table=ms.slice().reverse().map(m=>`<tr><td>${m.label}</td><td>${tg(m.pool.sales)}</td><td>${tg(m.pool.gross)}</td><td>${tg(m.pool.expenses)}</td><td class="pos">${tg(m.pool.net)}</td><td>${pct(m.pool.net/m.pool.sales,1)}</td><td><b>${pct(monthYield(m))}</b></td></tr>`).join('');
   const tabs=ms.map(m=>`<button type="button" data-k="${m.key}" class="${m.key===detailKey?'on':''}">${m.label.split(' ')[0]}</button>`).join('');
   app.innerHTML = `<header class="top"><div class="wrap">${BRAND}<span class="spacer"></span>
-      <nav class="anchors" aria-label="Разделы"><a href="#calc">Калькулятор</a><a href="#results">Результаты</a><a href="#how">Как это работает</a></nav></div></header>
+      <nav class="anchors" aria-label="Разделы"><a href="#calc">Калькулятор</a>${SALES?'<a href="#sales">Продажи</a>':''}<a href="#results">Результаты</a><a href="#how">Как это работает</a></nav></div></header>
   <main class="wrap">
     <section class="hero fade"><span class="eyebrow">Инвестиционный пул · e-commerce на Kaspi</span>
       <h1>Ваши деньги работают в товарах, которые <em>уже продаются</em></h1>
@@ -70,6 +118,8 @@ function render(){
       <div class="tile"><span class="eyebrow">Чистая прибыль</span><span class="v">${short(sumNet)} ₸</span><span class="s">${pct(sumNet/sumSales,1)} от продаж</span></div>
       <div class="tile"><span class="eyebrow">Начислено инвесторам</span><span class="v">${short(sumInv)} ₸</span><span class="s">капитал пула ${short(last.pool.capital)} ₸</span></div>
     </section>
+
+    ${salesSection()}
 
     <section id="calc" class="fade" style="display:grid;gap:16px">
       <div class="sec-h"><h2>Сколько бы вы заработали</h2><span class="muted">по фактической доходности каждого месяца</span></div>
