@@ -123,6 +123,14 @@ tr.click{cursor:pointer}
 tr.click:hover td{background:var(--bg)}
 .pos{color:var(--accent)}
 footer{font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+/* locked product names */
+.locked{display:inline-flex;align-items:center;gap:8px;vertical-align:middle}
+.lock{width:14px;height:14px;color:var(--gold);flex:none}
+.skel{display:inline-block;height:10px;border-radius:5px;background:linear-gradient(90deg,rgba(201,207,219,.28),rgba(201,207,219,.12));filter:blur(1.5px)}
+.lk-n{color:var(--ink);font-weight:600;white-space:nowrap}
+.lk-niche{display:block;font-size:.8rem;color:var(--muted);margin-top:2px}
+@media (max-width:560px){.skel{max-width:56px}}
+.lock-note{display:flex;align-items:center;gap:8px;margin:0;font-size:.85rem;color:var(--silver);border:1px dashed rgba(214,178,99,.4);border-radius:10px;padding:9px 12px;background:var(--gold-soft)}
 /* comparison */
 .sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
 .cmp{display:grid;gap:14px}
@@ -374,7 +382,9 @@ function poolBlock(m){
   const pl=rows.map(([l,v,c])=>`<div class="pl-row ${c}"><span>${l}</span><div class="bar"><span style="width:${Math.abs(v)/p.sales*100}%"></span></div><span class="num">${v<0?'−':''}${tg(Math.abs(v))}</span></div>`).join('');
   const ex=m.expenses.map(([l,v])=>`<div class="pl-row neg w4"><span>${l}</span><div class="bar"><span style="width:${v/m.expenses[0][1]*100}%"></span></div><span class="num">${tg(v)}</span><span class="pc">${pct(v/p.sales,1)}</span></div>`).join('')
     + `<div class="pl-row w4 total"><span>Итого</span><div class="bar" style="visibility:hidden"></div><span class="num">${tg(p.expenses)}</span><span class="pc">${pct(p.expenses/p.sales,1)}</span></div>`;
-  const top=m.top.map(t=>`<tr><td class="name">${esc(t.name)}${t.niche?` <span class="muted">· ${esc(t.niche)}</span>`:''}</td><td>${fmt(t.qty)}</td><td>${tg(t.sales)}</td><td class="pos">${tg(t.profit)}</td><td>${pct(t.profit/t.sales,0)}</td></tr>`).join('');
+  const LOCK='<svg class="lock" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5.2 7V5.2a2.8 2.8 0 0 1 5.6 0V7" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+  const locked=m.top.some(t=>t.locked);
+  const top=m.top.map((t,i)=>`<tr><td class="name">${t.locked?`<span class="locked" title="Название видят только действующие инвесторы и партнёры"><span class="lk-n">${esc(t.name)}</span>${LOCK}<span class="skel" style="width:${60+((i*37)%50)}px"></span></span>${t.niche?`<span class="lk-niche">${esc(t.niche)}</span>`:''}`:esc(t.name)+(t.niche?` <span class="muted">· ${esc(t.niche)}</span>`:'')}</td><td>${fmt(t.qty)}</td><td>${tg(t.sales)}</td><td class="pos">${tg(t.profit)}</td><td>${pct(t.profit/t.sales,0)}</td></tr>`).join('');
   return `<section class="grid2 fade">
     <div class="panel"><div class="panel-h"><h2>Результат пула</h2><span class="muted">${m.period}</span></div>
       <div class="pl">${pl}</div>
@@ -383,6 +393,7 @@ function poolBlock(m){
     <div class="panel"><div class="panel-h"><h2>Операционные расходы</h2><span class="muted">% от продаж</span></div><div class="pl">${ex}</div></div>
   </section>
   <section class="panel fade"><div class="panel-h"><h2>Лучшие товары месяца</h2><span class="muted">по прибыли</span></div>
+    ${locked?`<p class="lock-note">${LOCK}<span>Названия товаров видят только действующие инвесторы и партнёры Trendo Analytics в личном кабинете.</span></p>`:''}
     <div class="tbl-wrap"><table><thead><tr><th>Товар</th><th>Продано, шт</th><th>Выручка</th><th>Прибыль</th><th>Маржа</th></tr></thead><tbody>${top}</tbody></table></div></section>`;
 }
 

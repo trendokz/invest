@@ -61,7 +61,7 @@ for m in data["months"]:
     pm = {k: m[k] for k in ("key", "label", "period", "orders", "returns", "periods", "pool", "expenses", "top")}
     pm["paidToInvestors"] = sum(r["dividend"] for r in m["investors"])
     # Названия товаров на публичную страницу не попадают: только номер в рейтинге и ниша
-    pm["top"] = [{"name": f"Товар {i + 1}", "niche": niche(t["name"]), "qty": t["qty"], "sales": t["sales"], "profit": t["profit"]}
+    pm["top"] = [{"name": f"Товар {i + 1}", "locked": True, "niche": niche(t["name"]), "qty": t["qty"], "sales": t["sales"], "profit": t["profit"]}
                  for i, t in enumerate(m["top"])]
     pub_months.append(pm)
 pub = (here / "calculator" / "template.html").read_text()
