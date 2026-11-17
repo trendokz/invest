@@ -374,7 +374,7 @@ function poolBlock(m){
   const pl=rows.map(([l,v,c])=>`<div class="pl-row ${c}"><span>${l}</span><div class="bar"><span style="width:${Math.abs(v)/p.sales*100}%"></span></div><span class="num">${v<0?'−':''}${tg(Math.abs(v))}</span></div>`).join('');
   const ex=m.expenses.map(([l,v])=>`<div class="pl-row neg w4"><span>${l}</span><div class="bar"><span style="width:${v/m.expenses[0][1]*100}%"></span></div><span class="num">${tg(v)}</span><span class="pc">${pct(v/p.sales,1)}</span></div>`).join('')
     + `<div class="pl-row w4 total"><span>Итого</span><div class="bar" style="visibility:hidden"></div><span class="num">${tg(p.expenses)}</span><span class="pc">${pct(p.expenses/p.sales,1)}</span></div>`;
-  const top=m.top.map(t=>`<tr><td class="name">${esc(t.name)}</td><td>${fmt(t.qty)}</td><td>${tg(t.sales)}</td><td class="pos">${tg(t.profit)}</td><td>${pct(t.profit/t.sales,0)}</td></tr>`).join('');
+  const top=m.top.map(t=>`<tr><td class="name">${esc(t.name)}${t.niche?` <span class="muted">· ${esc(t.niche)}</span>`:''}</td><td>${fmt(t.qty)}</td><td>${tg(t.sales)}</td><td class="pos">${tg(t.profit)}</td><td>${pct(t.profit/t.sales,0)}</td></tr>`).join('');
   return `<section class="grid2 fade">
     <div class="panel"><div class="panel-h"><h2>Результат пула</h2><span class="muted">${m.period}</span></div>
       <div class="pl">${pl}</div>

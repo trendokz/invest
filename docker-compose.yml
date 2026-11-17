@@ -12,6 +12,7 @@ services:
       - ./cabinet/template.html:/src/cabinet/template.html:ro
       - ./calculator/template.html:/src/calculator/template.html:ro
       - ./docker/build.sh:/src/docker/build.sh:ro
+      - ./tools:/src/tools:ro
       - ${TRENDO_DATA_DIR:-./example}:/data:ro
       - site:/site
 

@@ -7,6 +7,7 @@ else echo "[trendo] /data/data.json не найден, использую data.e
 if [ -f /data/codes.json ]; then cp /data/codes.json codes.json
 else echo "[trendo] /data/codes.json не найден, тестовые коды: AB-1234 (инвестор), ADMIN-CODE (управляющий)"
   cp example/codes.json codes.json; fi
+if [ -f /data/sales.json ]; then cp /data/sales.json sales.json; fi
 TRENDO_DATA_DIR=/work python3 build.py
 mkdir -p /site/cabinet /site/calculator
 cp cabinet/index.html /site/cabinet/index.html

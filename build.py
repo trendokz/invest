@@ -1,7 +1,9 @@
 """Собирает index.html из template.html + data.json.
 Запуск: python3 build.py
 """
-import json, pathlib
+import json, pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).parent / "tools"))
+from niches import niche
 
 here = pathlib.Path(__file__).parent
 import os
@@ -58,11 +60,15 @@ pub_months = []
 for m in data["months"]:
     pm = {k: m[k] for k in ("key", "label", "period", "orders", "returns", "periods", "pool", "expenses", "top")}
     pm["paidToInvestors"] = sum(r["dividend"] for r in m["investors"])
+    # Названия товаров на публичную страницу не попадают: только номер в рейтинге и ниша
+    pm["top"] = [{"name": f"Товар {i + 1}", "niche": niche(t["name"]), "qty": t["qty"], "sales": t["sales"], "profit": t["profit"]}
+                 for i, t in enumerate(m["top"])]
     pub_months.append(pm)
 pub = (here / "calculator" / "template.html").read_text()
 pub = (pub.replace("/*STYLE*/", style).replace("/*HELPERS*/", helpers)
           .replace("/*DATA*/null", json.dumps({"months": pub_months, "benchmarks": data.get("benchmarks"), "sales": (json.loads((DATA_DIR / "sales.json").read_text()) if (DATA_DIR / "sales.json").exists() else None)}, ensure_ascii=False)))
-for bad in ["CODES", "ADMIN", "investors\":"] + [i["name"] for i in data["investors"]] + list(CODES.values()):
+product_names = {t["name"] for m in data["months"] for t in m["top"] if len(t["name"]) > 6}
+for bad in ["CODES", "ADMIN", "investors\":"] + [i["name"] for i in data["investors"]] + list(CODES.values()) + sorted(product_names):
     assert bad not in pub, bad
 (here / "calculator" / "index.html").write_text(pub)
 print("calculator/index.html собран:", len(pub_months), "мес., без данных инвесторов")
